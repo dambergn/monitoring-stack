@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector
+    container_name: otel-collector
+    restart: always
+    ports:
+      - "13133:13133"
+    command: >
+      --config=/etc/otel/config.yaml
+
+  otel-collector-config:
+    build: .
+    container_name: otel-collector-config
+    volumes:
+      - ./config.yaml:/etc/otel/config.yaml
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  jaeger:
+    image: jaegertracing/jaeger
+    container_name: jaeger
+    restart: always
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USERNAME=admin
+
+  portainer:
+    image: portainer/portainer-ce
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer-data:/data
+
+  otel-auto-instrumentation:
+    build: .
+    container_name: otel-auto-instrumentation
+    depends_on:
+      - otel-collector
