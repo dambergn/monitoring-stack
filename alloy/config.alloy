@@ -1,0 +1,30 @@
+// config.alloy
+
+logging {
+	level  = "debug" // Set to "info" for less verbose logs once stable
+	format = "logfmt"
+}
+
+// Alloy exposes its internal metrics on port 8080 by default.
+prometheus.scrape "alloy_internal_metrics" {
+  // Change localhost to 127.0.0.1 to force IPv4 connection.
+  targets = [{__address__ = "127.0.0.1:8080", __metrics_path__ = "/metrics"}] 
+  forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
+}
+
+// Configure a remote_write component to send metrics to Prometheus.
+prometheus.remote_write "prometheus_prom_write" {
+	endpoint {
+		url = "http://prometheus:9090/api/v1/write"
+	}
+}
+
+// Optional: You can add other configurations here if needed.
+// NEW: Scrape Node Exporter for system metrics
+prometheus.scrape "node_exporter_metrics" {
+  // "node-exporter" is the service name from its docker-compose.yml
+  // Docker's DNS will resolve this on the 'monitoring' network.
+  targets    = [{__address__ = "node-exporter:9100"}]
+  forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
+  // Job label will be "node_exporter_metrics"
+}

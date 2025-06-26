@@ -1,0 +1,14 @@
+services:
+  tempo:
+    image: grafana/tempo:main-f7ecf8c
+    container_name: tempo
+    networks:
+      - monitoring
+    ports:
+      - "14268:14268" # for jaeger
+      - "14250:14250" # for otlp grpc
+    command: -config.file=/etc/tempo.yaml
+
+networks:
+  monitoring:
+    external: true

@@ -1,0 +1,17 @@
+services:
+  grafana:
+    image: docker.io/grafana/grafana-oss:12.0.2
+    container_name: grafana
+    ports:
+      - "3100:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - monitoring
+      
+volumes:
+  grafana-data:
+
+networks:
+  monitoring:
+    external: true

@@ -1,0 +1,21 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.listen-address=:9090
+      - --web.enable-remote-write-receiver # <--- ADD THIS LINE!
+
+volumes:
+  prometheus_data:
+
+networks:
+  monitoring:
+    external: true

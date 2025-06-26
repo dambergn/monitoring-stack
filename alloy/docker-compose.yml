@@ -1,0 +1,42 @@
+# Alloy / Node_Exporter
+services:
+  alloy:
+    image: grafana/alloy:v1.9.2
+    container_name: alloy-alloy-1
+    command:
+      - "run"
+      - "/etc/alloy/config.alloy"  # <== directly provide the config file path
+      - "--storage.path=/var/lib/alloy/data"
+      - "--server.http.listen-addr=0.0.0.0:8080" # <--- ADD THIS LINE!
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy
+      - alloy-data:/var/lib/alloy/data
+    ports:
+      - "12345:12345"
+    networks:
+      - monitoring
+
+  node_exporter:
+    image: prom/node-exporter:v1.9.1
+    container_name: node-exporter # Name on the Docker network
+    # These mounts are crucial for Node Exporter to get host system metrics
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro # For disk usage metrics, needs to be read-only
+    command:
+      - '--path.procfs=/host/proc' # Tell node_exporter where to find procfs
+      - '--path.sysfs=/host/sys'   # Tell node_exporter where to find sysfs
+      - '--path.rootfs=/rootfs'    # Tell node_exporter where to find rootfs
+    ports:
+      - "9100:9100" # Expose Node Exporter's metrics port
+    networks:
+      - monitoring # Connect to your shared monitoring network
+    restart: unless-stopped # Always restart unless manually stopped
+
+volumes:
+  alloy-data:
+
+networks:
+  monitoring:
+    external: true
