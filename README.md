@@ -24,7 +24,7 @@ docker image prune -a
 ## Grafana (Visualization Platform)
 - https://hub.docker.com/r/grafana/grafana/tags
 ```
-
+grafana-cli plugins install marcusolsson-json-datasource
 ```
 
 ## Prometheus (Metrics Database)
@@ -55,3 +55,6 @@ CPU Usage: node_cpu_seconds_total{job="node_exporter_metrics"} (then maybe add m
 Memory Usage: node_memory_MemFree_bytes{job="node_exporter_metrics"} (or node_memory_MemAvailable_bytes for better insight)
 Disk Space: node_filesystem_avail_bytes{job="node_exporter_metrics"} (you may need to add device or mountpoint="/rootfs" labels to filter)
 Network Activity: node_network_receive_bytes_total{job="node_exporter_metrics"} (look at instance or device labels)
+
+# Notes
+Consider using Ansible for deploying collectors to hosts.

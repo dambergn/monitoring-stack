@@ -1,5 +1,7 @@
 #!/bin/bash
 
+## TODO - Update to provide list of what to restart.
+
 # Restart Grafana
 cd grafana
 docker compose down
