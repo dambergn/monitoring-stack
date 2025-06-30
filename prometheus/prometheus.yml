@@ -8,3 +8,16 @@ scrape_configs:
   - job_name: 'alloy'
     static_configs:
       - targets: ['alloy:12345']
+  - job_name: 'netdata'
+    # metrics_path defaults to '/metrics' but Netdata's is different
+    metrics_path: /api/v1/allmetrics
+    
+    # Tell Prometheus the format is Prometheus standard
+    params:
+      format: [prometheus]
+
+    static_configs:
+      - targets:
+        - '192.168.1.25:19999'
+        - '192.168.1.22:19999'
+        - '192.168.1.23:19999'
