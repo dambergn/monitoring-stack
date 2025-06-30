@@ -1,110 +1,124 @@
-Of course! Using Grafana to monitor status pages is an excellent and very common use case. It allows you to correlate external service outages (like GitHub, AWS, Cloudflare, etc.) with your own internal system metrics on a single pane of glass.
-When you see a spike in your application errors, you can immediately look at your "External Services" dashboard and see if GitHub Actions is down, saving you hours of debugging.
-The best way to do this depends on the technology powering the status page. Most modern status pages, like GitHub's (which is powered by Atlassian Statuspage), provide a machine-readable API endpoint.
-Here are the best methods, from most recommended to least.
-Method 1: The Best Way - Using the JSON API Data Source
-Most services like Atlassian Statuspage, Status.io, etc., provide a summary.json endpoint. This is the most reliable way to get structured data.
-GitHub's status page API endpoint is: https://www.githubstatus.com/api/v2/summary.json
-Here’s a step-by-step guide:
-1. Install the JSON API Plugin:
-This is a community plugin, but it's widely used and stable.
-In your Grafana instance, go to Administration -> Plugins.
-Search for JSON API and install it.
-Alternatively, use the grafana-cli:
-Generated bash
-grafana-cli plugins install marcusolsson-json-datasource
-Use code with caution.
-Bash
-Restart your Grafana server for the plugin to be loaded.
-2. Configure the JSON API Data Source:
-Go to Connections -> Data sources -> Add new data source.
-Search for JSON API and select it.
-Name: GitHub Status (or whatever you like).
-URL: https://www.githubstatus.com/api/v2/summary.json
-Click Save & test. You should see a "Success" message.
-3. Create Dashboard Panels:
-Now for the fun part. You can create different panels for different views.
-Panel A: Overall Status (Using the Stat Panel)
-This gives you a big, clear indicator of the overall health.
-Add a new panel and select the Stat visualization.
-Select your GitHub Status data source.
-In the query options, under Fields, set the Path to: $.status.indicator
-This uses JSONPath to extract the indicator field from the status object in the JSON response. The response looks like this: {"status":{"indicator":"none","description":"All Systems Operational"}, ...}.
-Transformations (Optional but recommended): Go to the Transform tab and use "Value mapping" to map text values to colors:
-none -> Green
-minor -> Yellow
-major -> Orange
-critical -> Red
-In the Panel options on the right, you can set the color mode to "Background" to make it very obvious.
-Panel B: Individual Component Status (Using Status History or Table)
-This is great for seeing the status of each individual component (e.g., Git Operations, API Requests, GitHub Actions).
-Add a new panel and select the Status History visualization.
-Select your GitHub Status data source.
-For the Path, use: $.components[*]
-The [*] selects all items in the components array.
-Grafana will now have access to each component object, which looks like: {"id":"...","name":"Git Operations","status":"operational",...}
-Under the Fields options, map the JSON fields to the panel fields:
-Name field: name
-Value field: status
-Value Mappings (Crucial!): Go to the Overrides or main panel options and set up Value Mappings to get colors.
-operational -> Green
-degraded_performance -> Yellow
-partial_outage -> Orange
-major_outage -> Red
-Method 2: Using an RSS/Atom Feed
-If a status page doesn't have a JSON API, it will almost certainly have an RSS or Atom feed for incidents. This is better for a historical log of incidents than a real-time status.
-GitHub's incident history RSS feed is: https://www.githubstatus.com/history.rss
-Install the RSS/Atom Plugin:
-Go to Administration -> Plugins and search for RSS/Atom. Install the grafana-rss-datasource.
-Restart Grafana.
-Configure the Data Source:
-Add a new RSS/Atom data source.
-Name: GitHub Incidents RSS
-URL: https://www.githubstatus.com/history.rss
-Save & test.
-Create a Dashboard Panel:
-A Table panel is best for this.
-Select your GitHub Incidents RSS data source.
-The data will be pre-formatted with columns like title, description, and published. You can show or hide these as needed. This gives you a great log of recent incidents.
-Method 3: Advanced - Prometheus + Blackbox Exporter
-If you are already heavily invested in the Prometheus ecosystem, this is a very powerful and robust method.
-Concept: The Blackbox exporter probes the status page's API endpoint. It checks for a 200 OK status and can even be configured to check the JSON content for a specific string (e.g., "indicator":"none"). Prometheus scrapes Blackbox, and Grafana queries Prometheus.
-High-level steps:
-Configure Blackbox Exporter: Add a module to your blackbox.yml to check the JSON content.
-Generated yaml
-modules:
-  http_json_check:
-    prober: http
-    http:
-      # Fails if the body doesn't contain this regex
-      fail_if_body_not_matches_regexp:
-        - '.*"indicator": ?"none".*'
-        - '.*"description": ?"All Systems Operational".*'
-Use code with caution.
-Yaml
-Configure Prometheus: Add a scrape job in prometheus.yml to probe the GitHub status URL via Blackbox.
-Generated yaml
-scrape_configs:
-  - job_name: 'github_status'
-    metrics_path: /probe
-    params:
-      module: [http_json_check] # Use the module from blackbox.yml
-    static_configs:
-      - targets:
-          - https://www.githubstatus.com/api/v2/summary.json
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: blackbox-exporter:9115 # Your Blackbox exporter address
-Use code with caution.
-Yaml
-Grafana: Use your existing Prometheus data source and query the probe_success metric. A value of 1 means success, and 0 means failure.
-Summary & Recommendation
-Method	Pros	Cons	Best For
-JSON API	Structured data, real-time, easy to visualize specific components.	Requires a simple plugin installation.	This is the recommended approach for almost everyone.
-RSS/Atom Feed	Simple, widely available, good for incident history.	Not real-time status, less structured data.	Viewing a log of recent incidents and announcements.
-Prometheus	Integrates perfectly with a Prometheus monitoring stack, very robust.	Most complex setup, requires multiple components.	Users who are already Prometheus experts.
-For your goal of monitoring the GitHub status page, start with Method 1 (JSON API Data Source). It's the perfect balance of simplicity, power, and gives you exactly the kind of visualizations you need.
+Of course! Monitoring the GitHub status page is a great use case for Grafana. It gives you a single place to see if a potential production issue is caused by your own systems or by a critical dependency like GitHub.
+
+Since the GitHub status page is a public service with a JSON API, you don't need Prometheus for this. You can pull the data directly into Grafana.
+
+The best and most direct way to do this is using the **Infinity data source plugin**. This plugin is designed to query data from JSON, CSV, XML, and other web APIs directly.
+
+Here is a step-by-step guide.
+
+---
+
+### Method 1: The Easy Way (Using the Infinity Plugin)
+
+This method is perfect for simple visualization without needing to set up another service.
+
+#### Step 1: Find the GitHub Status API URL
+
+The GitHub status page is hosted by Atlassian Statuspage, which provides a standard JSON API endpoint.
+
+The URL you need is:
+`https://www.githubstatus.com/api/v2/summary.json`
+
+(You can open this in your browser to see the raw data you'll be working with.)
+
+#### Step 2: Install the Infinity Plugin
+
+1.  In your Grafana instance, go to the side menu.
+2.  Navigate to **Administration -> Plugins**.
+3.  In the search bar, type `Infinity`.
+4.  Click on the plugin and then click the **Install** button.
+5.  Grafana will ask you to restart the Grafana server for the plugin to be enabled. Do this if prompted. (For Grafana Cloud or Docker-based installs, the restart might happen automatically or require a container restart).
+
+#### Step 3: Configure the Infinity Data Source
+
+1.  Navigate to **Configuration / Connections -> Data sources**.
+2.  Click **Add new data source**.
+3.  Search for and select **Infinity**.
+4.  You don't need to change any settings here. The default configuration is fine for a public, unauthenticated API. Just give it a name like `GitHub Status` and click **Save & test**.
+
+#### Step 4: Create a Dashboard Panel
+
+Now for the fun part. Let's create a panel to show the status of all GitHub components.
+
+1.  Go to a new or existing dashboard and click **Add -> Visualization**.
+2.  In the query editor at the bottom, select your `GitHub Status` data source.
+3.  Configure the Infinity query:
+    *   **Type**: `JSON`
+    *   **Source**: `URL`
+    *   **Parser**: `Backend` (this is usually the best default)
+    *   **URL**: Paste the URL from Step 1: `https://www.githubstatus.com/api/v2/summary.json`
+    *   **Root / Path**: This tells Infinity where the array of data is. Looking at the JSON, the components are in an array called `components`. So, type `components`.
+
+4.  Define your **Columns / Fields**:
+    *   **Column 1:**
+        *   Selector: `name`
+        *   Alias: `Component`
+    *   **Column 2:**
+        *   Selector: `status`
+        *   Alias: `Status`
+        *   Type: `String`
+
+At this point, you should see data appear in a table in your panel preview.
+
+#### Step 5: Choose the Right Visualization
+
+Now you can make it look good. With the data queried, select a visualization from the top-right panel list.
+
+**Option A: Status History (Best Choice)**
+This panel is perfect for this kind of data.
+1.  Change the Visualization to **Status history**.
+2.  In the panel options, you may need to map the fields:
+    *   **Value field**: `Status`
+    *   **Display name**: `Component`
+3.  Map the status values to colors under the **Value mappings** section in the panel editor. This makes the status immediately obvious.
+    *   `operational` -> Green
+    *   `degraded_performance` -> Orange
+    *   `partial_outage` -> Orange
+    *   `major_outage` -> Red
+
+
+
+**Option B: A Simple Table**
+If you just want the list, the **Table** visualization works out of the box with the query from Step 4. You can use **"Organize fields"** transform to hide unwanted columns.
+
+---
+
+### Method 2: The Advanced Way (Prometheus + Exporter)
+
+This method is more complex to set up but gives you powerful advantages:
+*   **Historical Data:** You can see exactly when GitHub's status changed over time.
+*   **Alerting:** You can use Prometheus Alertmanager to send you a Slack/PagerDuty/Email alert if `Git Operations` has a `major_outage`.
+
+#### The Concept
+
+You run a small application called an **exporter**. This exporter queries the `githubstatus.com` API every minute, converts the status into Prometheus metrics, and exposes them. Prometheus then scrapes the exporter.
+
+1.  **Run a Statuspage Exporter:** There are several available. A popular one is `slok/statuspage-exporter`. You would run this as a Docker container or a small service.
+    ```bash
+    docker run -d --restart=always -p 9577:9577 slok/statuspage-exporter --page-url=https://www.githubstatus.com
+    ```
+2.  **Configure Prometheus:** Add a scrape job to your `prometheus.yml` file to scrape this exporter.
+    ```yaml
+    scrape_configs:
+      - job_name: 'github-status'
+        static_configs:
+          - targets: ['localhost:9577'] # Or the IP where the exporter is running
+    ```
+3.  **Grafana:** In Grafana, you would point your panel to your **Prometheus data source**. Your query would look something like this to get the status (where 1 = operational, 0 = not):
+    ```promql
+    statuspage_component_status{page="GitHub", component="Git Operations"}
+    ```
+
+### Comparison: Which Method to Use?
+
+| Feature | Method 1: Infinity Plugin | Method 2: Prometheus Exporter |
+| :--- | :--- | :--- |
+| **Simplicity** | **Excellent.** No extra services needed. | **Complex.** Requires running an exporter and configuring Prometheus. |
+| **Visualization** | Good for "current status" dashboards. | Excellent. Full historical data and graphing. |
+| **Alerting** | Not possible directly. | **Excellent.** The primary reason to use this method. |
+| **Resource Usage** | Very low. Just a simple API call. | Higher. Adds load to Prometheus and requires running an exporter. |
+
+**Recommendation:**
+Start with **Method 1 (Infinity plugin)**. It’s incredibly simple to set up and will satisfy the requirement of "seeing the GitHub status in Grafana" for 90% of users.
+
+If you find that you need to **trigger alerts** or analyze historical uptime of GitHub, then invest the time to set up **Method 2**.
