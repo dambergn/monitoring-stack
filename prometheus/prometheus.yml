@@ -8,7 +8,7 @@ scrape_configs:
   - job_name: 'alloy'
     static_configs:
       - targets: ['alloy:12345']
-  - job_name: 'netdata'
+  - job_name: 'netdata_proxmox'
     # metrics_path defaults to '/metrics' but Netdata's is different
     metrics_path: /api/v1/allmetrics
     
@@ -21,3 +21,5 @@ scrape_configs:
         - '192.168.1.25:19999'
         - '192.168.1.22:19999'
         - '192.168.1.23:19999'
+        - '192.168.1.21:19999'
+        - '192.168.1.30:19999'
