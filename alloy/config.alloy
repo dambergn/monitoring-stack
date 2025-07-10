@@ -5,10 +5,13 @@ logging {
 	format = "logfmt"
 }
 
+// =================================================================
+// METRICS CONFIGURATION (Your existing setup)
+// =================================================================
+
 // Alloy exposes its internal metrics on port 8080 by default.
 prometheus.scrape "alloy_internal_metrics" {
-  // Change localhost to 127.0.0.1 to force IPv4 connection.
-  targets = [{__address__ = "127.0.0.1:8080", __metrics_path__ = "/metrics"}] 
+  targets    = [{__address__ = "127.0.0.1:8080", __metrics_path__ = "/metrics"}]
   forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
 }
 
@@ -19,12 +22,48 @@ prometheus.remote_write "prometheus_prom_write" {
 	}
 }
 
-// Optional: You can add other configurations here if needed.
-// NEW: Scrape Node Exporter for system metrics
+// Scrape Node Exporter for system metrics
 prometheus.scrape "node_exporter_metrics" {
-  // "node-exporter" is the service name from its docker-compose.yml
-  // Docker's DNS will resolve this on the 'monitoring' network.
   targets    = [{__address__ = "node-exporter:9100"}]
   forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
-  // Job label will be "node_exporter_metrics"
 }
+
+
+// =================================================================
+// LOGS CONFIGURATION (New section to add)
+// =================================================================
+
+// 1. Configure a loki.write component to send logs to your Loki instance.
+loki.write "default" {
+	endpoint {
+		// "loki" is the service name from your docker-compose.yml.
+		// Docker's DNS will resolve this on the 'monitoring' network.
+		url = "http://loki:3200/loki/api/v1/push"
+	}
+}
+
+// 2. Configure a loki.source.file component to discover and read log files.
+loki.source.file "system_logs" {
+	targets = discover.files(
+		// This will find all files ending in .log in /var/log and its subdirectories
+		path = "/var/log/**/*.log",
+	)
+	// This "wires" the output of this component to the input of the loki.write component.
+	forward_to = [loki.write.default.receiver]
+}
+
+// BONUS: To scrape logs from other Docker containers, you can add this component.
+// This is extremely powerful for monitoring your applications.
+/*
+loki.source.docker "container_logs" {
+  host       = "unix:///var/run/docker.sock"
+  forward_to = [loki.write.default.receiver]
+
+  // This adds the container name as a 'container' label to the log entries.
+  relabel_rules {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+*/
