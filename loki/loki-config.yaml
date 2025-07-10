@@ -28,3 +28,8 @@ schema_config:
 
 ruler:
   alertmanager_url: http://localhost:9093
+
+# THIS IS THE NEW BLOCK THAT FIXES THE ERROR
+# It explicitly disables the new feature that is causing the conflict.
+limits_config:
+  allow_structured_metadata: false
