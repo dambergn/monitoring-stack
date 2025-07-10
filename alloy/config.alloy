@@ -32,3 +32,38 @@ prometheus.scrape "node_exporter_metrics" {
 // =================================================================
 // LOGS CONFIGURATION
 // =================================================================
+
+// Define the final destination for ALL logs on your specified port.
+loki.write "default" {
+	endpoint {
+		url = "http://loki:3200/loki/api/v1/push"
+	}
+}
+
+// STEP 1: Discover all running Docker containers.
+discovery.docker "all_containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// STEP 2: Scrape the logs from the discovered containers using loki.scrape.
+// This is the correct modern equivalent to Promtail's scrape_configs.
+loki.scrape "docker_logs" {
+  // Wire the targets from the discovery block above.
+  targets    = discovery.docker.all_containers.targets
+  // Send the scraped logs to our Loki destination.
+  forward_to = [loki.write.default.receiver]
+
+  // Add a clean 'container' label to the logs. This syntax is correct for a scrape component.
+  relabel_configs {
+    rule {
+      source_labels = ["__meta_docker_container_name"]
+      regex         = "/(.*)"
+      target_label  = "container"
+    }
+    // Also add a 'job' label so you can easily find these logs in Grafana.
+    rule {
+      replacement  = "docker"
+      target_label = "job"
+    }
+  }
+}
