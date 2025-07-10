@@ -33,51 +33,51 @@ prometheus.scrape "node_exporter_metrics" {
 // LOGS CONFIGURATION
 // =================================================================
 
-// Define the final destination for our logs on the correct port.
+// Define the final destination for ALL logs on the correct port.
 loki.write "default" {
 	endpoint {
-		url = "http://loki:3200/loki/api/v1/push" // <-- CORRECTED PORT
+		url = "http://loki:3200/loki/api/v1/push" // <-- Using your specified port
 	}
 }
 
+
 // --- Pipeline for HOST system logs ---
 
-// STEP 1.1: Discover log files on the host.
-discovery.file "system_log_files" {
-  path_targets = [{
-    "__path__" = "/var/log/**/*.log",
-  }]
+// STEP 1.1: Discover log files on the host using the correct `paths` attribute.
+discovery.file "system_logs" {
+  paths = ["/var/log/**/*.log"]
 }
 
-// STEP 1.2: Scrape the discovered files and send them DIRECTLY to Loki.
-// (No processing needed for this simple case).
-loki.source.file "system_logs" {
-  targets    = discovery.file.system_log_files.targets
+// STEP 1.2: Scrape the discovered files and forward them directly to Loki.
+loki.source.file "host_files" {
+  targets    = discovery.file.system_logs.targets
   forward_to = [loki.write.default.receiver]
 }
 
 
-// --- Pipeline for DOCKER container logs ---
+// --- Pipeline for DOCKER container logs (Correct 3-stage pipeline) ---
 
-// STEP 2.1: Scrape all Docker container logs.
-// This source sends logs to a PROCESSING stage, not directly to Loki.
-loki.source.docker "container_logs" {
-  host       = "unix:///var/run/docker.sock"
-  forward_to = [loki.process.docker_relabel.receiver] // <-- Forwards to the processing block
+// STEP 2.1: Discover all running Docker containers.
+discovery.docker "all_containers" {
+  host = "unix:///var/run/docker.sock"
 }
 
-// STEP 2.2: Process the logs to add a clean 'container' label.
-// THIS IS THE CORRECT WAY TO RELABEL.
-loki.process "docker_relabel" {
-  // Use a relabel stage to transform the internal __meta_docker label.
-  stage.relabel {
-    rules {
-      source_labels = ["__meta_docker_container_name"]
-      regex         = "/(.*)" // Captures the full container name without the leading slash
-      target_label  = "container"
-    }
+// STEP 2.2: Scrape the logs from the discovered containers.
+// This forwards the raw logs to the RELABEL component.
+loki.source.docker "raw_docker_logs" {
+  targets    = discovery.docker.all_containers.targets // <-- Correct wiring
+  forward_to = [loki.relabel.docker_logs.receiver]     // <-- Forward to the relabeler
+}
+
+// STEP 2.3: Relabel the logs. THIS IS THE CORRECT METHOD.
+// It takes logs from the source, adds the label, and sends them to the final destination.
+loki.relabel "docker_logs" {
+  forward_to = [loki.write.default.receiver] // Forward final logs to Loki
+
+  // Define the relabeling rule.
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
   }
-
-  // After processing, forward the final log entry to Loki.
-  forward_to = [loki.write.default.receiver]
 }
