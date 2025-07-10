@@ -45,22 +45,23 @@ discovery.docker "all_containers" {
   host = "unix:///var/run/docker.sock"
 }
 
-// STEP 2: Scrape the logs from the discovered containers using loki.scrape.
-// This is the correct modern equivalent to Promtail's scrape_configs.
-loki.scrape "docker_logs" {
+// STEP 2: Scrape logs from the discovered containers using the correct component.
+loki.source.docker "docker_logs" {
   // Wire the targets from the discovery block above.
   targets    = discovery.docker.all_containers.targets
   // Send the scraped logs to our Loki destination.
   forward_to = [loki.write.default.receiver]
 
-  // Add a clean 'container' label to the logs. This syntax is correct for a scrape component.
+  // THIS IS THE CORRECT SYNTAX.
+  // The relabeling config is a block directly inside the source component.
   relabel_configs {
+    // Rule to create a clean 'container' label.
     rule {
       source_labels = ["__meta_docker_container_name"]
       regex         = "/(.*)"
       target_label  = "container"
     }
-    // Also add a 'job' label so you can easily find these logs in Grafana.
+    // Rule to add a 'job' label for easy filtering in Grafana.
     rule {
       replacement  = "docker"
       target_label = "job"
