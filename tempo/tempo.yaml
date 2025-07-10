@@ -11,7 +11,10 @@ distributor:
           endpoint: 0.0.0.0:4317
         http:
           endpoint: 0.0.0.0:4318
-    jaeger: {} # Jaeger receiver on default ports
+    jaeger:
+      protocols:
+        thrift_http: # Listens on the default port 14268
+        grpc:        # Listens on the default port 14250
     zipkin: {} # Zipkin receiver on default port 9411
 
 # This section is for storing traces on the local filesystem.
