@@ -1,23 +1,20 @@
-# tempo.yaml
+# tempo.yaml (Simplified and Corrected)
+
 server:
-  http_listen_port: 3300 # Port for Tempo's UI, API, and metrics
+  http_listen_port: 3300 # Correct port for the UI and API
 
 distributor:
   receivers:
-    jaeger: # Jaeger receiver
-      protocols:
-        thrift_http:
-          endpoint: 0.0.0.0:14268
     otlp: # OpenTelemetry receiver
       protocols:
         grpc:
-          endpoint: 0.0.0.0:4317 # Standard OTLP gRPC port
+          endpoint: 0.0.0.0:4317
         http:
-          endpoint: 0.0.0.0:4318 # Standard OTLP HTTP port
-    zipkin: {} # Zipkin receiver (enabled on default port 9411)
+          endpoint: 0.0.0.0:4318
+    jaeger: {} # Jaeger receiver on default ports
+    zipkin: {} # Zipkin receiver on default port 9411
 
-# This section is for storing traces.
-# We'll use the local filesystem for simplicity.
+# This section is for storing traces on the local filesystem.
 storage:
   trace:
     backend: local
@@ -26,20 +23,9 @@ storage:
 
 # The ingester is responsible for writing traces to storage.
 ingester:
-  # How long to wait before flushing a trace to storage.
   max_block_duration: 5m
 
 # The compactor reduces the number of trace files on disk.
 compactor:
   compaction:
-    # How often to look for blocks to compact.
     compaction_window: 1h
-
-# Allows Tempo to be discovered by Grafana.
-metrics_generator:
-  storage:
-    path: /tmp/tempo/generator/wal
-  traces_storage:
-    backend: local
-    local:
-      path: /tmp/tempo/traces
