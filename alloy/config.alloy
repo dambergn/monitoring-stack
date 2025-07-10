@@ -33,37 +33,29 @@ prometheus.scrape "node_exporter_metrics" {
 // LOGS CONFIGURATION (New section to add)
 // =================================================================
 
-// 1. Configure a loki.write component to send logs to your Loki instance.
 loki.write "default" {
 	endpoint {
-		// "loki" is the service name from your docker-compose.yml.
-		// Docker's DNS will resolve this on the 'monitoring' network.
-		url = "http://loki:3200/loki/api/v1/push"
+		url = "http://loki:3100/loki/api/v1/push"
 	}
 }
 
-// 2. Configure a loki.source.file component to discover and read log files.
+// Corrected loki.source.file component
 loki.source.file "system_logs" {
 	targets = discover.files(
-		// This will find all files ending in .log in /var/log and its subdirectories
-		path = "/var/log/**/*.log",
+		// CORRECT SYNTAX: Pass the path directly as a string argument
+		"/var/log/**/*.log"
 	)
-	// This "wires" the output of this component to the input of the loki.write component.
 	forward_to = [loki.write.default.receiver]
 }
 
-// BONUS: To scrape logs from other Docker containers, you can add this component.
-// This is extremely powerful for monitoring your applications.
-/*
+// (Optional but Recommended) Scrape logs from all other Docker containers.
 loki.source.docker "container_logs" {
   host       = "unix:///var/run/docker.sock"
   forward_to = [loki.write.default.receiver]
 
-  // This adds the container name as a 'container' label to the log entries.
   relabel_rules {
     source_labels = ["__meta_docker_container_name"]
     regex         = "/(.*)"
     target_label  = "container"
   }
 }
-*/
