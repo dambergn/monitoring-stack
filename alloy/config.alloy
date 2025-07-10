@@ -6,7 +6,7 @@ logging {
 }
 
 // =================================================================
-// METRICS CONFIGURATION (Your existing setup)
+// METRICS CONFIGURATION
 // =================================================================
 
 // Alloy exposes its internal metrics on port 8080 by default.
@@ -30,25 +30,31 @@ prometheus.scrape "node_exporter_metrics" {
 
 
 // =================================================================
-// LOGS CONFIGURATION (New section to add)
+// LOGS CONFIGURATION
 // =================================================================
 
+// Define the destination for our logs
 loki.write "default" {
 	endpoint {
 		url = "http://loki:3100/loki/api/v1/push"
 	}
 }
 
-// Corrected loki.source.file component
+// STEP 1: Define a component to DISCOVER the log files on the host system.
+// This component exports a list of targets.
+discovery.file "system_log_files" {
+  paths = ["/var/log/**/*.log"]
+}
+
+// STEP 2: Define the log source component and WIRE its 'targets' input
+// to the output from the discovery component above.
 loki.source.file "system_logs" {
-	targets = discover.files(
-		// CORRECT SYNTAX: Pass the path directly as a string argument
-		"/var/log/**/*.log"
-	)
-	forward_to = [loki.write.default.receiver]
+  targets    = discovery.file.system_log_files.targets // <-- THIS IS THE CORRECT WIRING
+  forward_to = [loki.write.default.receiver]
 }
 
 // (Optional but Recommended) Scrape logs from all other Docker containers.
+// This component discovers and scrapes logs in one step.
 loki.source.docker "container_logs" {
   host       = "unix:///var/run/docker.sock"
   forward_to = [loki.write.default.receiver]
