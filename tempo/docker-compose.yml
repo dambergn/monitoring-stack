@@ -2,6 +2,7 @@ services:
   tempo:
     image: grafana/tempo:main-f7ecf8c
     container_name: tempo
+    user: root
     ports:
       # --- Ports for sending data TO Tempo ---
       - "14268:14268"  # Jaeger Thrift

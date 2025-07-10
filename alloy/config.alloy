@@ -118,38 +118,23 @@ loki.relabel "docker_logs" {
 // TRACES CONFIGURATION
 // =================================================================
 
-// 1. Define an OTLP receiver to accept trace data from applications.
+// 1. Define a native Tempo push destination.
+// This is the simplest way to send traces to Tempo.
+tempo.push "default" {
+  // Tell it where the Tempo gRPC receiver is.
+  endpoint = "tempo:4317"
+  insecure = true // We are on a secure Docker network
+}
+
+// 2. Define a receiver to accept trace data from your applications.
+// This is still needed so your apps have somewhere to send data.
 otelcol.receiver.otlp "default" {
-  grpc {
-    endpoint = "0.0.0.0:4319"
-  }
-  http {
-    endpoint = "0.0.0.0:4320"
-  }
-}
+  grpc {} // Listen on default 0.0.0.0:4317
+  http {} // Listen on default 0.0.0.0:4318
 
-// 2. Define an OTLP exporter to forward traces TO the Tempo service.
-otelcol.exporter.otlp "to_tempo" {
-  client {
-    endpoint = "tempo:4317" // Sends to Tempo's gRPC port
-    tls {
-      insecure = true
-    }
-  }
-}
-
-// 3. Define a processing pipeline. A batch processor is recommended.
-otelcol.processor.batch "default" {
-  // Wire the processor's output to the Tempo exporter's input.
+  // The 'output' block directly defines where the received traces go.
+  // This wires it to the tempo.push component's input.
   output {
-    traces = [otelcol.exporter.otlp.to_tempo.input]
+    traces = [tempo.push.default.input]
   }
-}
-
-// 4. Activate the pipeline using the CORRECT 'otelcol.pipeline.traces' component.
-// This block wires the receiver to the processor, completing the chain.
-otelcol.pipeline.traces "default" {
-  receivers = [otelcol.receiver.otlp.default.output]
-  processors = [otelcol.processor.batch.default.input]
-  // The exporter is wired in the processor, so we don't list it here.
 }
