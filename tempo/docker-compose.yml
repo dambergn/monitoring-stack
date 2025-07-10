@@ -2,12 +2,27 @@ services:
   tempo:
     image: grafana/tempo:main-f7ecf8c
     container_name: tempo
+    ports:
+      # --- Ports for sending data TO Tempo ---
+      - "14268:14268"  # Jaeger Thrift
+      - "4317:4317"    # OTLP gRPC (standard)
+      - "4318:4318"    # OTLP HTTP (standard)
+      - "9411:9411"    # Zipkin
+      # --- Port for Grafana/UI to query Tempo ---
+      # Exposing on host port 3201 to avoid conflict with Loki's 3200
+      - "3201:3200"
+    command: -config.file=/etc/tempo.yaml
+    volumes:
+      # Mount the config file into the container
+      - ./tempo.yaml:/etc/tempo.yaml
+      # Create a named volume for persistent trace storage
+      - tempo-data:/tmp/tempo
     networks:
       - monitoring
-    ports:
-      - "14268:14268" # for jaeger
-      - "14250:14250" # for otlp grpc
-    command: -config.file=/etc/tempo.yaml
+    restart: unless-stopped
+
+volumes:
+  tempo-data:
 
 networks:
   monitoring:

@@ -18,6 +18,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "12345:12345"
+      # NEW: Expose ports for Alloy to receive traces
+      - "4319:4319" # OTLP gRPC
+      - "4320:4320" # OTLP HTTP
     networks:
       - monitoring
 
