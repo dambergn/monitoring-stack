@@ -5,16 +5,12 @@ services:
     container_name: alloy-alloy-1
     command:
       - "run"
-      - "/etc/alloy/config.alloy"
+      - "/etc/alloy/config.alloy"  # <== directly provide the config file path
       - "--storage.path=/var/lib/alloy/data"
-      - "--server.http.listen-addr=0.0.0.0:8080"
+      - "--server.http.listen-addr=0.0.0.0:8080" # <--- ADD THIS LINE!
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy
       - alloy-data:/var/lib/alloy/data
-      # ADD THIS LINE: To read host system logs (for loki.source.file)
-      - /var/log:/var/log:ro
-      # ADD THIS LINE: To read other container logs (for loki.source.docker)
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "12345:12345"
     networks:
