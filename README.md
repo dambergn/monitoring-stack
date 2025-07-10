@@ -39,6 +39,7 @@ This also utilizes node exporter.
 
 ## Loki - (Logs Database)
 - https://grafana.com/docs/loki/latest/setup/install/docker/
+- https://hub.docker.com/r/grafana/loki/tags
 
 ## Tempo (Traces Database)
 - https://hub.docker.com/r/grafana/tempo/tags

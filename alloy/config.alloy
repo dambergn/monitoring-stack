@@ -69,7 +69,7 @@ loki.process "filter" {
   forward_to = [loki.write.default.receiver]
 }
 
-// --- PIPELINE 2: DOCKER CONTAINER LOGS (New section) ---
+// --- PIPELINE 2: DOCKER CONTAINER LOGS ---
 
 // STEP 2.1: Discover all running Docker containers.
 discovery.docker "all_containers" {

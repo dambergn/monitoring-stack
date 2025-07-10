@@ -11,9 +11,9 @@ services:
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy
       - alloy-data:/var/lib/alloy/data
-      # ADD THIS LINE: To read host system logs (for loki.source.file)
+      # read host system logs (for loki.source.file)
       - /var/log:/var/log:ro
-      # ADD THIS LINE: To read other container logs (for loki.source.docker)
+      # read other container logs (for loki.source.docker)
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "12345:12345"
