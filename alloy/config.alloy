@@ -41,6 +41,9 @@ loki.write "default" {
 	}
 }
 
+
+// --- PIPELINE 1: HOST FILE LOGS (Your existing setup) ---
+
 // Discover log files on the host system.
 local.file_match "host_logs" {
      path_targets = [{"__path__" = "/var/log/*.log"}]
@@ -74,27 +77,25 @@ discovery.docker "all_containers" {
 }
 
 // STEP 2.2: Scrape logs from the discovered containers.
-// This forwards the raw logs to a RELABELING component.
 loki.source.docker "from_docker" {
+  // THIS IS THE FIX: The 'host' attribute is required here as well.
+  host       = "unix:///var/run/docker.sock" 
+  
   targets    = discovery.docker.all_containers.targets
   forward_to = [loki.relabel.docker_logs.receiver]
 }
 
 // STEP 2.3: Relabel the Docker logs to make them useful.
-// This adds clean 'job' and 'container' labels.
 loki.relabel "docker_logs" {
-  // After relabeling, forward the logs to the final destination.
   forward_to = [loki.write.default.receiver]
 
-  // Rule 1: Add a 'job' label so you can easily find these logs.
   rule {
     replacement  = "integrations/docker"
     target_label = "job"
   }
-  // Rule 2: Create a clean 'container' label from Docker's internal metadata.
   rule {
     source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)" // Captures the container name without the leading slash
+    regex         = "/(.*)"
     target_label  = "container"
   }
 }
