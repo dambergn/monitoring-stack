@@ -40,28 +40,30 @@ loki.write "default" {
 	}
 }
 
-// STEP 1: Define a component to DISCOVER the log files on the host system.
-// This component exports a list of targets.
+// STEP 1: Discover log files using the correct 'path_targets' attribute.
 discovery.file "system_log_files" {
-  paths = ["/var/log/**/*.log"]
+  path_targets = [{
+    "__path__" = "/var/log/**/*.log",
+  }]
 }
 
-// STEP 2: Define the log source component and WIRE its 'targets' input
-// to the output from the discovery component above.
+// STEP 2: Scrape the discovered files. This wiring is correct.
 loki.source.file "system_logs" {
-  targets    = discovery.file.system_log_files.targets // <-- THIS IS THE CORRECT WIRING
+  targets    = discovery.file.system_log_files.targets
   forward_to = [loki.write.default.receiver]
 }
 
-// (Optional but Recommended) Scrape logs from all other Docker containers.
-// This component discovers and scrapes logs in one step.
+// STEP 3: Scrape Docker logs using the correct 'relabel_rules' attribute syntax.
 loki.source.docker "container_logs" {
   host       = "unix:///var/run/docker.sock"
   forward_to = [loki.write.default.receiver]
 
-  relabel_rules {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
-  }
+  // THIS IS THE CORRECT SYNTAX for relabeling.
+  relabel_rules = discovery.relabel.relabel_rules(
+    rule {
+      source_labels = ["__meta_docker_container_name"]
+      regex         = "/(.*)"
+      target_label  = "container"
+    },
+  )
 }
