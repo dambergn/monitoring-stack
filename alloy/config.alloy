@@ -118,23 +118,29 @@ loki.relabel "docker_logs" {
 // TRACES CONFIGURATION
 // =================================================================
 
-// 1. Define a native Tempo push destination.
-// This is the simplest way to send traces to Tempo.
-tempo.push "default" {
-  // Tell it where the Tempo gRPC receiver is.
-  endpoint = "tempo:4317"
-  insecure = true // We are on a secure Docker network
+// STEP 1: Define an exporter to send data TO Tempo.
+// This is the destination.
+otelcol.exporter.otlp "to_tempo" {
+  client {
+    // The endpoint for Tempo's OTLP gRPC receiver.
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true // On a secure Docker network
+    }
+  }
 }
 
-// 2. Define a receiver to accept trace data from your applications.
-// This is still needed so your apps have somewhere to send data.
-otelcol.receiver.otlp "default" {
-  grpc {} // Listen on default 0.0.0.0:4317
-  http {} // Listen on default 0.0.0.0:4318
+// STEP 2: Define a receiver to accept data FROM your applications.
+// This is the entrypoint.
+otelcol.receiver.otlp "from_apps" {
+  // Define the gRPC and HTTP listeners for incoming traces.
+  grpc {} // Listens on default 0.0.0.0:4317
+  http {} // Listens on default 0.0.0.0:4318
 
   // The 'output' block directly defines where the received traces go.
-  // This wires it to the tempo.push component's input.
+  // This creates the entire pipeline by wiring the receiver directly
+  // to the exporter's input.
   output {
-    traces = [tempo.push.default.input]
+    traces = [otelcol.exporter.otlp.to_tempo.input]
   }
 }
