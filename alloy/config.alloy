@@ -119,7 +119,6 @@ loki.relabel "docker_logs" {
 // =================================================================
 
 // 1. Define an OTLP receiver to accept trace data from applications.
-// Your apps will send traces to Alloy on port 4319.
 otelcol.receiver.otlp "traces_receiver" {
   grpc {
     endpoint = "0.0.0.0:4319"
@@ -134,23 +133,22 @@ otelcol.exporter.otlp "tempo_exporter" {
   client {
     endpoint = "tempo:4317" // Sends to Tempo's gRPC port
     tls {
-      insecure = true // We are on a secure Docker network
+      insecure = true
     }
   }
 }
 
-// 3. Define a processing pipeline. A batch processor is recommended.
+// 3. Define a processing pipeline.
 otelcol.processor.batch "default" {
   output {
     traces = [otelcol.exporter.otlp.tempo_exporter.input]
   }
 }
 
-// 4. Activate the pipeline by wiring the components together in a service.
-otelcol.service.traces "default" {
-  pipeline {
+// 4. Activate the pipeline using the CORRECT service component.
+otelcol.service.telemetry "default" {
+  pipeline "traces" { // Name this pipeline 'traces'
     receivers = [otelcol.receiver.otlp.traces_receiver.output]
     processors = [otelcol.processor.batch.default.input]
-    // The processor forwards to the exporter, so we don't list exporters here.
   }
 }

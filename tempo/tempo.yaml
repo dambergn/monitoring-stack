@@ -1,6 +1,6 @@
 # tempo.yaml
 server:
-  http_listen_port: 3200 # Port for Tempo's UI, API, and metrics
+  http_listen_port: 3300 # Port for Tempo's UI, API, and metrics
 
 distributor:
   receivers:
