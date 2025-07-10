@@ -36,7 +36,7 @@ prometheus.scrape "node_exporter_metrics" {
 // Define the destination for our logs
 loki.write "default" {
 	endpoint {
-		url = "http://loki:3100/loki/api/v1/push"
+		url = "http://loki:3200/loki/api/v1/push"
 	}
 }
 
