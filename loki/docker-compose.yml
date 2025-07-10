@@ -10,17 +10,6 @@ services:
     networks:
       - monitoring
 
-  # promtail:
-  #   image: grafana/promtail:latest
-  #   container_name: promtail
-  #   volumes:
-  #     - ./promtail-config.yml:/etc/promtail/config.yml
-  #     - /var/log:/var/log # Mount host logs
-  #     - /var/run/docker.sock:/var/run/docker.sock # Needed for the optional docker scrape job
-  #   command: -config.file=/etc/promtail/config.yml
-  #   networks:
-  #     - monitoring
-
 networks:
   monitoring:
     external: true
