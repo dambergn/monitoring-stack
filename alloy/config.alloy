@@ -33,37 +33,51 @@ prometheus.scrape "node_exporter_metrics" {
 // LOGS CONFIGURATION
 // =================================================================
 
-// Define the destination for our logs
+// Define the final destination for our logs on the correct port.
 loki.write "default" {
 	endpoint {
-		url = "http://loki:3200/loki/api/v1/push"
+		url = "http://loki:3200/loki/api/v1/push" // <-- CORRECTED PORT
 	}
 }
 
-// STEP 1: Discover log files using the correct 'path_targets' attribute.
+// --- Pipeline for HOST system logs ---
+
+// STEP 1.1: Discover log files on the host.
 discovery.file "system_log_files" {
   path_targets = [{
     "__path__" = "/var/log/**/*.log",
   }]
 }
 
-// STEP 2: Scrape the discovered files. This wiring is correct.
+// STEP 1.2: Scrape the discovered files and send them DIRECTLY to Loki.
+// (No processing needed for this simple case).
 loki.source.file "system_logs" {
   targets    = discovery.file.system_log_files.targets
   forward_to = [loki.write.default.receiver]
 }
 
-// STEP 3: Scrape Docker logs using the correct 'relabel_rules' attribute syntax.
+
+// --- Pipeline for DOCKER container logs ---
+
+// STEP 2.1: Scrape all Docker container logs.
+// This source sends logs to a PROCESSING stage, not directly to Loki.
 loki.source.docker "container_logs" {
   host       = "unix:///var/run/docker.sock"
-  forward_to = [loki.write.default.receiver]
+  forward_to = [loki.process.docker_relabel.receiver] // <-- Forwards to the processing block
+}
 
-  // THIS IS THE CORRECT SYNTAX for relabeling.
-  relabel_rules = discovery.relabel.relabel_rules(
-    rule {
+// STEP 2.2: Process the logs to add a clean 'container' label.
+// THIS IS THE CORRECT WAY TO RELABEL.
+loki.process "docker_relabel" {
+  // Use a relabel stage to transform the internal __meta_docker label.
+  stage.relabel {
+    rules {
       source_labels = ["__meta_docker_container_name"]
-      regex         = "/(.*)"
+      regex         = "/(.*)" // Captures the full container name without the leading slash
       target_label  = "container"
-    },
-  )
+    }
+  }
+
+  // After processing, forward the final log entry to Loki.
+  forward_to = [loki.write.default.receiver]
 }
