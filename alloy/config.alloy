@@ -46,7 +46,20 @@ loki.write "default" {
 
 // Discover log files on the host system.
 local.file_match "host_logs" {
-     path_targets = [{"__path__" = "/var/log/*.log"}]
+     path_targets = [
+        // Your original pattern for all files ending in .log
+        {"__path__" = "/var/log/*.log"},
+        
+        // ADD THIS: A pattern for a specific file
+        {"__path__" = "/var/log/syslog"},
+        
+        // ADD THIS: Another specific file example
+        {"__path__" = "/var/log/dpkg.log"},
+        
+        // You could also add another wildcard pattern if needed,
+        // for example, to get logs from a subdirectory:
+        // {"__path__" = "/var/log/nginx/*.log"},
+     ]
  }
 
 // Scrape the discovered log files.
