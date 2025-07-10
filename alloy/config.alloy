@@ -40,31 +40,22 @@ loki.write "default" {
 	}
 }
 
-// STEP 1: Discover all running Docker containers.
-discovery.docker "all_containers" {
-  host = "unix:///var/run/docker.sock"
+ local.file_match "local_files" {
+     path_targets = [{"__path__" = "/var/log/*.log"}]
+     sync_period = "5s"
+ }
+
+loki.source.file "log_scrape" {
+  targets    = local.file_match.local_files.targets
+  forward_to = [loki.process.filter_logs.receiver]
+  tail_from_end = true
 }
 
-// STEP 2: Scrape logs from the discovered containers using the correct component.
-loki.source.docker "docker_logs" {
-  // Wire the targets from the discovery block above.
-  targets    = discovery.docker.all_containers.targets
-  // Send the scraped logs to our Loki destination.
-  forward_to = [loki.write.default.receiver]
-
-  // THIS IS THE CORRECT SYNTAX.
-  // The relabeling config is a block directly inside the source component.
-  relabel_configs {
-    // Rule to create a clean 'container' label.
-    rule {
-      source_labels = ["__meta_docker_container_name"]
-      regex         = "/(.*)"
-      target_label  = "container"
+loki.process "filter_logs" {
+  stage.drop {
+      source = ""
+      expression  = ".*Connection closed by authenticating user root"
+      drop_counter_reason = "noisy"
     }
-    // Rule to add a 'job' label for easy filtering in Grafana.
-    rule {
-      replacement  = "docker"
-      target_label = "job"
-    }
-  }
+  forward_to = [loki.write.grafana_loki.receiver]
 }
