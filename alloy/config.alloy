@@ -33,51 +33,37 @@ prometheus.scrape "node_exporter_metrics" {
 // LOGS CONFIGURATION
 // =================================================================
 
-// Define the final destination for ALL logs on the correct port.
+// Define the final destination for ALL logs on your specified port.
 loki.write "default" {
 	endpoint {
-		url = "http://loki:3200/loki/api/v1/push" // <-- Using your specified port
+		url = "http://loki:3200/loki/api/v1/push"
 	}
 }
 
-
-// --- Pipeline for HOST system logs ---
-
-// STEP 1.1: Discover log files on the host using the correct `paths` attribute.
-discovery.file "system_logs" {
-  paths = ["/var/log/**/*.log"]
-}
-
-// STEP 1.2: Scrape the discovered files and forward them directly to Loki.
-loki.source.file "host_files" {
-  targets    = discovery.file.system_logs.targets
-  forward_to = [loki.write.default.receiver]
-}
-
-
-// --- Pipeline for DOCKER container logs (Correct 3-stage pipeline) ---
-
-// STEP 2.1: Discover all running Docker containers.
+// STEP 1: Discover all running Docker containers.
 discovery.docker "all_containers" {
   host = "unix:///var/run/docker.sock"
 }
 
-// STEP 2.2: Scrape the logs from the discovered containers.
-// This forwards the raw logs to the RELABEL component.
-loki.source.docker "raw_docker_logs" {
-  targets    = discovery.docker.all_containers.targets // <-- Correct wiring
-  forward_to = [loki.relabel.docker_logs.receiver]     // <-- Forward to the relabeler
-}
+// STEP 2: Scrape the logs from the discovered containers using loki.scrape.
+// This is the correct modern equivalent to Promtail's scrape_configs.
+loki.scrape "docker_logs" {
+  // Wire the targets from the discovery block above.
+  targets    = discovery.docker.all_containers.targets
+  // Send the scraped logs to our Loki destination.
+  forward_to = [loki.write.default.receiver]
 
-// STEP 2.3: Relabel the logs. THIS IS THE CORRECT METHOD.
-// It takes logs from the source, adds the label, and sends them to the final destination.
-loki.relabel "docker_logs" {
-  forward_to = [loki.write.default.receiver] // Forward final logs to Loki
-
-  // Define the relabeling rule.
-  rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
+  // Add a clean 'container' label to the logs. This syntax is correct for a scrape component.
+  relabel_configs {
+    rule {
+      source_labels = ["__meta_docker_container_name"]
+      regex         = "/(.*)"
+      target_label  = "container"
+    }
+    // Also add a 'job' label so you can easily find these logs in Grafana.
+    rule {
+      replacement  = "docker"
+      target_label = "job"
+    }
   }
 }
