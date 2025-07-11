@@ -23,6 +23,7 @@ services:
       - "4320:4320" # OTLP HTTP
     networks:
       - monitoring
+    restart: unless-stopped
 
   node_exporter:
     image: prom/node-exporter:v1.9.1

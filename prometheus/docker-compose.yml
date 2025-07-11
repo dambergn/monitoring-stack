@@ -12,6 +12,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.listen-address=:9090
       - --web.enable-remote-write-receiver # <--- ADD THIS LINE!
+    restart: unless-stopped
 
 volumes:
   prometheus_data:

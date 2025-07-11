@@ -9,6 +9,7 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - monitoring
+    restart: unless-stopped
 
 networks:
   monitoring:
