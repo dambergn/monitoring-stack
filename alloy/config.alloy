@@ -10,7 +10,7 @@ logging {
 // =================================================================
 
 // Alloy exposes its internal metrics on port 8080 by default.
-prometheus.scrape "alloy_internal_metrics" {
+prometheus.scrape "alloy_metrics_internal" {
   targets    = [{__address__ = "127.0.0.1:8080", __metrics_path__ = "/metrics"}]
   forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
 }
