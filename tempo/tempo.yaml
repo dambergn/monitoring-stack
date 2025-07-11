@@ -1,7 +1,7 @@
 # tempo.yaml (Simplified and Corrected)
 
 server:
-  http_listen_port: 3301 # Correct port for the UI and API
+  http_listen_port: 3300 # Correct port for the UI and API
 
 distributor:
   receivers:

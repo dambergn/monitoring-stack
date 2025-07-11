@@ -11,7 +11,7 @@ services:
       - "9411:9411"    # Zipkin
       # --- Port for Grafana/UI to query Tempo ---
       # Exposing on host port 3201 to avoid conflict with Loki's 3200
-      - "3301:3300"
+      - "3300:3300"
     command: -config.file=/etc/tempo.yaml
     volumes:
       # Mount the config file into the container
