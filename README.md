@@ -19,6 +19,8 @@ docker compose down -v
 docker stop $(sudo docker ps -q)
 docker rm -f $(sudo docker ps -a -q)
 docker image prune -a
+
+docker logs <container name>
 ```
 
 ## Grafana (Visualization Platform)
