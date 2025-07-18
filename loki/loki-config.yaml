@@ -1,16 +1,11 @@
-auth_enabled: false
-
-server:
-  http_listen_port: 3200
-  grpc_listen_port: 9096
-
+# All data will be stored in subdirectories of /loki inside the container
 common:
   instance_addr: 127.0.0.1
-  path_prefix: /tmp/loki
+  path_prefix: /loki  # Use /loki as the base
   storage:
     filesystem:
-      chunks_directory: /tmp/loki/chunks
-      rules_directory: /tmp/loki/rules
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
   replication_factor: 1
   ring:
     kvstore:
@@ -26,16 +21,20 @@ schema_config:
         prefix: index_
         period: 24h
 
-ruler:
-  alertmanager_url: http://localhost:9093
+# This is no longer needed if you aren't using Loki for alerting.
+# Keeping it is fine, but it can be removed for simplicity.
+# ruler:
+#   alertmanager_url: http://localhost:9093
 
+# Paths are now consistent with the 'common' section
 storage_config:
   boltdb_shipper:
     active_index_directory: /loki/index
     cache_location: /loki/cache
     cache_ttl: 24h
 
-# THIS IS THE NEW BLOCK THAT FIXES THE ERROR
-# It explicitly disables the new feature that is causing the conflict.
+# This setting can limit functionality with some log formats.
+# It's better to set it to 'true' or remove it to use the default.
 limits_config:
-  allow_structured_metadata: false
+  allow_structured_metadata: true
+  retention_period: 336h # 14 days
