@@ -1,7 +1,13 @@
-# All data will be stored in subdirectories of /loki inside the container
+# loki-config.yaml (Quick Fix)
+auth_enabled: false
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9096
+
 common:
   instance_addr: 127.0.0.1
-  path_prefix: /loki  # Use /loki as the base
+  path_prefix: /loki
   storage:
     filesystem:
       chunks_directory: /loki/chunks
@@ -14,27 +20,20 @@ common:
 schema_config:
   configs:
     - from: 2020-10-24
-      store: boltdb-shipper
+      store: boltdb-shipper  # Keeping the old engine
       object_store: filesystem
-      schema: v11
+      schema: v11            # Keeping the old schema
       index:
         prefix: index_
         period: 24h
 
-# This is no longer needed if you aren't using Loki for alerting.
-# Keeping it is fine, but it can be removed for simplicity.
-# ruler:
-#   alertmanager_url: http://localhost:9093
-
-# Paths are now consistent with the 'common' section
 storage_config:
   boltdb_shipper:
     active_index_directory: /loki/index
     cache_location: /loki/cache
     cache_ttl: 24h
 
-# This setting can limit functionality with some log formats.
-# It's better to set it to 'true' or remove it to use the default.
 limits_config:
-  allow_structured_metadata: true
-  retention_period: 336h # 14 days
+  # This is the only change. Disable the feature causing the conflict.
+  allow_structured_metadata: false 
+  retention_period: 336h
