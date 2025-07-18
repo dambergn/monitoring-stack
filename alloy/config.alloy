@@ -23,7 +23,7 @@ prometheus.remote_write "prometheus_prom_write" {
 }
 
 // Scrape Node Exporter for system metrics
-prometheus.scrape "node_exporter_metrics" {
+prometheus.scrape "node_exporter_metrics_internal" {
   targets    = [{__address__ = "host.docker.internal:9100"}]
   forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
 }
