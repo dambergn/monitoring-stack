@@ -4,6 +4,8 @@ services:
     image: grafana/alloy:v1.9.2
     container_name: alloy
     user: root
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command:
       - "run"
       - "/etc/alloy/config.alloy"
@@ -40,8 +42,8 @@ services:
       - '--path.rootfs=/rootfs'    # Tell node_exporter where to find rootfs
     ports:
       - "9100:9100" # Expose Node Exporter's metrics port
-    networks:
-      - monitoring # Connect to your shared monitoring network
+    # networks:
+    #   - monitoring # Connect to your shared monitoring network
     restart: unless-stopped # Always restart unless manually stopped
 
 volumes:
