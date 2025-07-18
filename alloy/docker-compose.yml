@@ -31,6 +31,7 @@ services:
   node_exporter:
     image: prom/node-exporter:v1.9.1
     container_name: node-exporter # Name on the Docker network
+    network_mode: host
     # These mounts are crucial for Node Exporter to get host system metrics
     volumes:
       - /proc:/host/proc:ro
