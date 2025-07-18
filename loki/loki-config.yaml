@@ -34,7 +34,6 @@ storage_config:
     active_index_directory: /loki/index
     cache_location: /loki/cache
     cache_ttl: 24h
-    shared_store: filesystem
 
 # THIS IS THE NEW BLOCK THAT FIXES THE ERROR
 # It explicitly disables the new feature that is causing the conflict.
