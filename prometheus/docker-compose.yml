@@ -3,7 +3,7 @@ services:
     image: prom/prometheus:v3.4.1
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      - /mnt/monitoring/prometheus_data:/prometheus
     ports:
       - "9090:9090"
     networks:
@@ -14,8 +14,8 @@ services:
       - --web.enable-remote-write-receiver # <--- ADD THIS LINE!
     restart: unless-stopped
 
-volumes:
-  prometheus_data:
+# volumes:
+#   prometheus_data:
 
 networks:
   monitoring:
