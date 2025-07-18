@@ -1,4 +1,4 @@
-# loki-config.yaml (Quick Fix)
+# loki-config.yaml (Recommended Modern Fix)
 auth_enabled: false
 
 server:
@@ -17,23 +17,25 @@ common:
     kvstore:
       store: inmemory
 
+# --- THIS SECTION IS UPDATED ---
 schema_config:
   configs:
-    - from: 2020-10-24
-      store: boltdb-shipper  # Keeping the old engine
+    - from: 2024-04-01       # Use a recent date
+      store: tsdb              # Use the modern TSDB index
       object_store: filesystem
-      schema: v11            # Keeping the old schema
+      schema: v13              # Use a schema that supports the new features
       index:
         prefix: index_
         period: 24h
 
+# The old `storage_config` for boltdb-shipper is no longer needed.
+# TSDB uses the paths defined in the `common` block above.
 storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/index
-    cache_location: /loki/cache
-    cache_ttl: 24h
+  filesystem:
+    directory: /loki/tsdb
 
+
+# --- THIS SECTION IS NOW VALID ---
 limits_config:
-  # This is the only change. Disable the feature causing the conflict.
-  allow_structured_metadata: false 
+  allow_structured_metadata: true # This feature now works correctly
   retention_period: 336h
