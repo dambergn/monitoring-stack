@@ -29,6 +29,13 @@ schema_config:
 ruler:
   alertmanager_url: http://localhost:9093
 
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/index
+    cache_location: /loki/cache
+    cache_ttl: 24h
+    shared_store: filesystem
+
 # THIS IS THE NEW BLOCK THAT FIXES THE ERROR
 # It explicitly disables the new feature that is causing the conflict.
 limits_config:
