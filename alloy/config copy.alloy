@@ -41,17 +41,6 @@ loki.write "default" {
 	}
 }
 
-loki.relabel "add_host_label" {
-  forward_to = [loki.write.default.receiver] // Forward to the final destination
-
-  // Add a static label to identify this machine.
-  // *** CHANGE "plex-server" to a name that uniquely identifies this machine. ***
-  rule {
-    replacement  = "internal"
-    target_label = "host"
-  }
-}
-
 
 // --- PIPELINE 1: HOST FILE LOGS (Your existing setup) ---
 
@@ -90,7 +79,7 @@ loki.process "filter" {
   }
 
   // After processing, forward the logs to the final destination.
-  forward_to = [loki.relabel.add_host_label.receiver]
+  forward_to = [loki.write.default.receiver]
 }
 
 // --- PIPELINE 2: DOCKER CONTAINER LOGS ---
@@ -111,7 +100,7 @@ loki.source.docker "from_docker" {
 
 // STEP 2.3: Relabel the Docker logs to make them useful.
 loki.relabel "docker_logs" {
-  forward_to = [loki.relabel.add_host_label.receiver]
+  forward_to = [loki.write.default.receiver]
 
   rule {
     replacement  = "integrations/docker"
