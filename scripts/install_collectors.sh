@@ -96,7 +96,9 @@ After=network-online.target
 User=alloy
 Group=alloy
 Type=simple
-ExecStart=/usr/local/bin/alloy --config.file=/etc/alloy/config.alloy --storage.path=/var/lib/alloy
+Environment="HOSTNAME=%H"
+ExecStart=/usr/local/bin/alloy run /etc/alloy/config.alloy --storage.path=/var/lib/alloy --server.http.listen-addr=127.0.0.1:12345
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
@@ -106,6 +108,7 @@ echo "Grafana Alloy installed."
 
 # 4. Create the Alloy configuration file
 echo "STEP 4: Creating Alloy configuration file..."
+HOSTNAME=$(hostname)
 PROMETHEUS_IP=""
 while [ -z "$PROMETHEUS_IP" ]; do
     read -p "Enter the IP address of your Prometheus server: " PROMETHEUS_IP
@@ -124,23 +127,28 @@ logging {
     format = "logfmt"
 }
 
-// Define the destination for metrics (your Prometheus server)
+// Scrape the metrics and forward them directly to the remote_write destination.
+prometheus.scrape "node_exporter" {
+    targets    = [{"__address__" = "localhost:9100"}]
+    forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.scrape "alloy_metrics" {
+    targets    = [{"__address__" = "127.0.0.1:12345"}]
+    forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// The remote_write block now has an explicit input and will add
+// the hostname label just before sending.
 prometheus.remote_write "default" {
+    // Because of the systemd fix, env("HOSTNAME") will now work.
+    external_labels = {
+        hostname = env("HOSTNAME"),
+    }
+
     endpoint {
         url = "http://${PROMETHEUS_IP}:9090/api/v1/write"
     }
-}
-
-// Scrape Alloy's own internal metrics
-prometheus.scrape "alloy_metrics_local" {
-    targets    = [{"__address__" = "127.0.0.1:8080"}]
-    forward_to = [prometheus.remote_write.default.receiver]
-}
-
-// Scrape this machine's metrics using Node Exporter
-prometheus.scrape "node_exporter_local" {
-    targets    = [{"__address__" = "localhost:9100"}]
-    forward_to = [prometheus.remote_write.default.receiver]
 }
 EOF
 
