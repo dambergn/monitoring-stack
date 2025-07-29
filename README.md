@@ -50,6 +50,9 @@ This also utilizes node exporter.
 
 ## Faro (Client Side Collector)
 
+## Nginx
+- https://hub.docker.com/_/nginx/tags
+
 # Metrics collection
 For System Metrics from Node Exporter:
 Try these queries. They should now return data:
