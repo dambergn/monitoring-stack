@@ -11,6 +11,8 @@ services:
       # Mount certbot data for SSL certificates
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/var/www/certbot
+      # Web landing page
+      - ./src:/usr/share/nginx/html
     restart: always
 
 networks:
