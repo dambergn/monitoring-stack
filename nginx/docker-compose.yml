@@ -1,0 +1,22 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Mount our custom nginx config
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      # Mount certbot data for SSL certificates
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    restart: always
+    depends_on:
+      - portainer
+      - prometheus
+      - grafana
+
+networks:
+  monitoring:
+    external: true

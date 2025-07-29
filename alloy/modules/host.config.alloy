@@ -1,0 +1,28 @@
+logging {
+    level  = "info"
+    format = "logfmt"
+}
+
+// Scrape the metrics and forward them directly to the remote_write destination.
+prometheus.scrape "node_exporter" {
+    targets    = [{"__address__" = "localhost:9100"}]
+    forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.scrape "alloy_metrics" {
+    targets    = [{"__address__" = "127.0.0.1:12345"}]
+    forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// The remote_write block now has an explicit input and will add
+// the hostname label just before sending.
+prometheus.remote_write "default" {
+    // Because of the systemd fix, env("HOSTNAME") will now work.
+    external_labels = {
+        hostname = env("HOSTNAME"),
+    }
+
+    endpoint {
+        url = "http://192.168.1.11:9090/api/v1/write"
+    }
+}
