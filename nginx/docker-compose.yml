@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: nginx:latest
+    image: nginx:1.29.0-bookworm-perl
     container_name: nginx-proxy
     ports:
       - "80:80"
