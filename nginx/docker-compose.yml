@@ -1,19 +1,20 @@
 services:
+  # NGINX Reverse Proxy Service
   nginx:
-    image: nginx:1.29.0-bookworm-perl
-    container_name: nginx-proxy
+    image: nginx:latest
+    container_name: my-nginx-proxy
     ports:
+      # Map host ports to container ports
       - "80:80"
       - "443:443"
     volumes:
-      # Mount our custom nginx config
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      # Mount certbot data for SSL certificates
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-      # Web landing page
-      - ./src:/usr/share/nginx/html
-    restart: always
+      # Mount our NGINX config
+      - ./nginx/conf/default.conf:/etc/nginx/conf.d/default.conf
+      # Mount our self-signed certificates
+      - ./nginx/ssl:/etc/nginx/ssl
+    restart: unless-stopped
+    depends_on:
+      - my-app
 
 networks:
   monitoring:
