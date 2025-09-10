@@ -13,8 +13,6 @@ services:
       # Mount our self-signed certificates
       - ./nginx/ssl:/etc/nginx/ssl
     restart: unless-stopped
-    depends_on:
-      - my-app
 
 networks:
   monitoring:
