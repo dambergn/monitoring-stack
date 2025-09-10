@@ -1,4 +1,4 @@
-  # NGINX Reverse Proxy Service
+# NGINX Reverse Proxy Service
 services:
   nginx:
     image: nginx:latest
