@@ -9,22 +9,40 @@ logging {
 // METRICS CONFIGURATION
 // =================================================================
 
-// Alloy exposes its internal metrics on port 8080 by default.
-prometheus.scrape "alloy_metrics_internal" {
-  targets    = [{__address__ = "127.0.0.1:8080", __metrics_path__ = "/metrics"}]
-  forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
+// retrieval of system hostname
+local.file "hostname" {
+  filename = "/etc/host_hostname"
 }
 
 // Configure a remote_write component to send metrics to Prometheus.
 prometheus.remote_write "prometheus_prom_write" {
-	endpoint {
-		url = "http://prometheus:9090/api/v1/write"
-	}
+        external_labels = {
+                // string.trim_space removes any hidden newline characters from the file
+                hostname = string.trim_space(local.file.hostname.content),
+        }
+        endpoint {
+                url = "http://<prometheus server>/api/v1/write"
+        }
 }
 
-// Scrape Node Exporter for system metrics
-prometheus.scrape "node_exporter_metrics_internal" {
-  targets    = [{__address__ = "host.docker.internal:9100"}]
+// Scrape Alloy Internal Metrics
+prometheus.scrape "alloy_metrics_plex" {
+  targets = [{
+    __address__      = "127.0.0.1:8080",
+    __metrics_path__ = "/metrics",
+    // NEW: Override the instance label so it shows up as your Hostname instead of 127.0.0.1
+    instance         = string.trim_space(local.file.hostname.content),
+  }]
+  forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
+}
+
+// Scrape Node Exporter System Metrics
+prometheus.scrape "node_exporter_metrics_plex" {
+  targets    = [{
+    __address__ = "host.docker.internal:9100",
+    // NEW: Override the instance label so it shows up as your Hostname instead of host.docker.internal
+    instance    = string.trim_space(local.file.hostname.content),
+  }]
   forward_to = [prometheus.remote_write.prometheus_prom_write.receiver]
 }
 
